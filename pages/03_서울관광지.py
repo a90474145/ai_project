@@ -1,10 +1,10 @@
 import streamlit as st
 import folium
-from streamlit_folium import st_folium
+from streamlit.components.v1 import html
 
 st.set_page_config(page_title="서울 관광지", layout="wide")
 
-st.title("🇰🇷 서울 인기 관광지 TOP10")
+st.title("🇰🇷 외국인이 좋아하는 서울 관광지 TOP10")
 
 places = [
     {
@@ -12,7 +12,7 @@ places = [
         "lat": 37.579617,
         "lon": 126.977041,
         "subway": "경복궁역(3호선)",
-        "fun": "한복체험, 북촌 산책"
+        "fun": "한복체험, 북촌한옥마을"
     },
     {
         "name": "명동",
@@ -26,7 +26,7 @@ places = [
         "lat": 37.556336,
         "lon": 126.922031,
         "subway": "홍대입구역(2호선)",
-        "fun": "버스킹, 맛집"
+        "fun": "버스킹, 맛집 탐방"
     },
     {
         "name": "강남",
@@ -34,6 +34,13 @@ places = [
         "lon": 127.027619,
         "subway": "강남역(2호선)",
         "fun": "카페, 쇼핑"
+    },
+    {
+        "name": "N서울타워",
+        "lat": 37.551169,
+        "lon": 126.988227,
+        "subway": "명동역(4호선)",
+        "fun": "야경 감상, 케이블카"
     },
 ]
 
@@ -45,31 +52,30 @@ m = folium.Map(
 
 # 마커 추가
 for place in places:
+
+    popup_text = f"""
+    <b>{place['name']}</b><br>
+    🚇 {place['subway']}<br>
+    🎉 {place['fun']}
+    """
+
     folium.Marker(
-        [place["lat"], place["lon"]],
-        popup=place["name"],
-        tooltip=place["name"]
+        location=[place["lat"], place["lon"]],
+        popup=popup_text,
+        tooltip=place["name"],
+        icon=folium.Icon(color="red")
     ).add_to(m)
 
-# 지도 표시
-map_data = st_folium(
-    m,
-    width=1000,
-    height=600
-)
+# 지도 HTML 렌더링
+map_html = m._repr_html_()
 
-# 클릭 정보
-clicked = map_data.get("last_object_clicked")
+html(map_html, height=600)
 
-if clicked:
-    lat = clicked["lat"]
-    lng = clicked["lng"]
+st.divider()
 
-    for place in places:
-        if (
-            abs(place["lat"] - lat) < 0.0001
-            and abs(place["lon"] - lng) < 0.0001
-        ):
-            st.success(
-                f"🚇 가까운 역: {place['subway']} | 🎉 놀거리: {place['fun']}"
-            )
+st.subheader("📍 관광지 정보")
+
+for place in places:
+    st.info(
+        f"{place['name']} | 🚇 {place['subway']} | 🎉 {place['fun']}"
+    )
