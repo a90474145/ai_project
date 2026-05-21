@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 
 # -----------------------------
 # 페이지 설정
@@ -18,22 +19,25 @@ plt.rcParams['axes.unicode_minus'] = False
 # -----------------------------
 # 데이터 불러오기
 # -----------------------------
-df = pd.read_csv("population.csv", encoding="cp949")
+df = pd.read_csv("population.csv", encoding="utf-8")
 
 # -----------------------------
-# 행정구 컬럼
+# 필요한 데이터 추출
 # -----------------------------
+# 행정구 이름 컬럼
 district_col = df.columns[0]
 
-# -----------------------------
-# 연령 컬럼 찾기
-# -----------------------------
+# 숫자 데이터만 추출
+numeric_df = df.select_dtypes(include='number')
+
+# 연령 데이터 컬럼 찾기
 age_columns = []
 
-for col in df.columns:
+for col in numeric_df.columns:
     col_str = str(col)
 
-    if "세" in col_str:
+    # 나이 관련 컬럼만 추출
+    if '세' in col_str or '연령' in col_str:
         age_columns.append(col)
 
 # -----------------------------
@@ -46,7 +50,7 @@ selected_district = st.selectbox(
     districts
 )
 
-# 선택 데이터
+# 선택한 행정구 데이터
 selected_row = df[df[district_col] == selected_district]
 
 # -----------------------------
@@ -57,11 +61,8 @@ population = []
 
 for col in age_columns:
     try:
-        value = str(selected_row[col].values[0]).replace(",", "")
-
-        ages.append(col)
-        population.append(int(value))
-
+        ages.append(str(col))
+        population.append(int(selected_row[col].values[0]))
     except:
         pass
 
@@ -71,28 +72,28 @@ for col in age_columns:
 fig, ax = plt.subplots(figsize=(14, 6))
 
 # 회색 배경
-fig.patch.set_facecolor("lightgray")
-ax.set_facecolor("lightgray")
+fig.patch.set_facecolor('lightgray')
+ax.set_facecolor('lightgray')
 
 # 빨간색 꺾은선 그래프
 ax.plot(
     ages,
     population,
-    color="red",
+    color='red',
     linewidth=2,
-    marker="o"
+    marker='o'
 )
 
-# 제목 및 축
+# 제목 및 축 설정
 ax.set_title("서울시 행정구별 인구수", fontsize=18)
 ax.set_xlabel("나이", fontsize=12)
 ax.set_ylabel("인구수", fontsize=12)
 
-# x축 회전
+# x축 글자 회전
 plt.xticks(rotation=90)
 
-# 레이아웃 정리
+# 여백 자동 조정
 plt.tight_layout()
 
-# 출력
+# 그래프 출력
 st.pyplot(fig)
