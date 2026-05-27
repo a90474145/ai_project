@@ -1,25 +1,19 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 # ---------------------------------
-# 페이지 설정
+# Page Setting
 # ---------------------------------
 st.set_page_config(
-    page_title="서울시 행정구별 인구수",
+    page_title="Seoul Population",
     layout="wide"
 )
 
-st.title("서울시 행정구별 인구수")
+st.title("Seoul Population Dashboard")
 
 # ---------------------------------
-# 한글 폰트 설정
-# ---------------------------------
-plt.rcParams["font.family"] = "Malgun Gothic"
-plt.rcParams["axes.unicode_minus"] = False
-
-# ---------------------------------
-# CSV 파일 읽기
+# CSV Load
 # ---------------------------------
 encodings = ["cp949", "euc-kr", "utf-8"]
 
@@ -28,22 +22,21 @@ df = None
 for enc in encodings:
     try:
         df = pd.read_csv("population.csv", encoding=enc)
-        st.success(f"성공한 인코딩: {enc}")
         break
     except:
         pass
 
 if df is None:
-    st.error("CSV 파일을 읽을 수 없습니다.")
+    st.error("Cannot read CSV file.")
     st.stop()
 
 # ---------------------------------
-# 행정구 컬럼
+# District Column
 # ---------------------------------
 district_col = df.columns[0]
 
 # ---------------------------------
-# 나이 컬럼 찾기
+# Age Columns
 # ---------------------------------
 age_columns = []
 
@@ -55,27 +48,27 @@ for col in df.columns:
         age_columns.append(col)
 
 # ---------------------------------
-# 사이드바
+# Sidebar
 # ---------------------------------
-st.sidebar.header("메뉴")
+st.sidebar.header("Menu")
 
 graph_type = st.sidebar.radio(
-    "그래프 선택",
+    "Select Graph",
     [
-        "행정구별 그래프",
-        "10살 간격 TOP10 그래프"
+        "District Graph",
+        "Age Group TOP10"
     ]
 )
 
 # =================================
-# 1. 행정구별 그래프
+# 1. District Graph
 # =================================
-if graph_type == "행정구별 그래프":
+if graph_type == "District Graph":
 
     districts = df[district_col].tolist()
 
     selected_district = st.selectbox(
-        "행정구를 선택하세요",
+        "Select District",
         districts
     )
 
@@ -91,91 +84,87 @@ if graph_type == "행정구별 그래프":
                 selected_row[col].values[0]
             ).replace(",", "")
 
-            ages.append(col)
+            age_text = str(col).replace("세", "")
+
+            ages.append(age_text)
             populations.append(int(value))
 
         except:
             pass
 
-    # ---------------------------------
-    # 그래프
-    # ---------------------------------
-    fig, ax = plt.subplots(figsize=(16, 6))
+    graph_df = pd.DataFrame({
+        "age": ages,
+        "population": populations
+    })
 
-    # 회색 배경
-    fig.patch.set_facecolor("lightgray")
-    ax.set_facecolor("lightgray")
-
-    # 빨간색 꺾은선
-    ax.plot(
-        ages,
-        populations,
-        color="red",
-        linewidth=2,
-        marker="o"
+    # ---------------------------------
+    # Plotly Graph
+    # ---------------------------------
+    fig = px.line(
+        graph_df,
+        x="age",
+        y="population",
+        markers=True
     )
 
-    # 제목
-    ax.set_title(
-        "서울시 행정구별 인구수",
-        fontsize=18
+    # Background Color
+    fig.update_layout(
+        plot_bgcolor="lightgray",
+        paper_bgcolor="lightgray",
+
+        # title 제거
+        title=None,
+
+        xaxis_title="age",
+        yaxis_title="population"
     )
 
-    # 축 이름
-    ax.set_xlabel("age", fontsize=12)
-    ax.set_ylabel("population", fontsize=12)
+    # Line Color
+    fig.update_traces(
+        line=dict(color="red", width=3)
+    )
 
-    # x축 회전
-    plt.xticks(rotation=90)
-
-    # 여백 자동 조정
-    plt.tight_layout()
-
-    # 출력
-    st.pyplot(fig)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
 # =================================
-# 2. 10살 간격 TOP10 그래프
+# 2. Age Group TOP10
 # =================================
 else:
 
     age_group = st.selectbox(
-        "10살 간격 나이대를 선택하세요",
+        "Select Age Group",
         [
-            "0~9세",
-            "10~19세",
-            "20~29세",
-            "30~39세",
-            "40~49세",
-            "50~59세",
-            "60~69세",
-            "70~79세",
-            "80~89세",
-            "90세 이상"
+            "0~9",
+            "10~19",
+            "20~29",
+            "30~39",
+            "40~49",
+            "50~59",
+            "60~69",
+            "70~79",
+            "80~89",
+            "90+"
         ]
     )
 
-    # ---------------------------------
-    # 나이대 매핑
-    # ---------------------------------
     age_mapping = {
-        "0~9세": list(range(0, 10)),
-        "10~19세": list(range(10, 20)),
-        "20~29세": list(range(20, 30)),
-        "30~39세": list(range(30, 40)),
-        "40~49세": list(range(40, 50)),
-        "50~59세": list(range(50, 60)),
-        "60~69세": list(range(60, 70)),
-        "70~79세": list(range(70, 80)),
-        "80~89세": list(range(80, 90)),
-        "90세 이상": list(range(90, 100))
+        "0~9": list(range(0, 10)),
+        "10~19": list(range(10, 20)),
+        "20~29": list(range(20, 30)),
+        "30~39": list(range(30, 40)),
+        "40~49": list(range(40, 50)),
+        "50~59": list(range(50, 60)),
+        "60~69": list(range(60, 70)),
+        "70~79": list(range(70, 80)),
+        "80~89": list(range(80, 90)),
+        "90+": list(range(90, 100))
     }
 
     selected_ages = age_mapping[age_group]
 
-    # ---------------------------------
-    # 각 행정구 인구 계산
-    # ---------------------------------
     result = []
 
     for idx, row in df.iterrows():
@@ -203,50 +192,42 @@ else:
 
     result_df = pd.DataFrame(
         result,
-        columns=["행정구", "인구수"]
+        columns=["district", "population"]
     )
 
-    # ---------------------------------
-    # 상위 10개
-    # ---------------------------------
     result_df = result_df.sort_values(
-        by="인구수",
+        by="population",
         ascending=False
     ).head(10)
 
     # ---------------------------------
-    # 그래프
+    # Plotly Graph
     # ---------------------------------
-    fig, ax = plt.subplots(figsize=(14, 6))
-
-    # 회색 배경
-    fig.patch.set_facecolor("lightgray")
-    ax.set_facecolor("lightgray")
-
-    # 빨간색 꺾은선
-    ax.plot(
-        result_df["행정구"],
-        result_df["인구수"],
-        color="red",
-        linewidth=3,
-        marker="o"
+    fig = px.line(
+        result_df,
+        x="district",
+        y="population",
+        markers=True
     )
 
-    # 제목
-    ax.set_title(
-        "서울시 행정구별 인구수",
-        fontsize=18
+    # Background Color
+    fig.update_layout(
+        plot_bgcolor="lightgray",
+        paper_bgcolor="lightgray",
+
+        # title 제거
+        title=None,
+
+        xaxis_title="district",
+        yaxis_title="population"
     )
 
-    # 축 이름
-    ax.set_xlabel("age", fontsize=12)
-    ax.set_ylabel("population", fontsize=12)
+    # Line Color
+    fig.update_traces(
+        line=dict(color="red", width=3)
+    )
 
-    # x축 회전
-    plt.xticks(rotation=45)
-
-    # 여백 자동 조정
-    plt.tight_layout()
-
-    # 출력
-    st.pyplot(fig)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
