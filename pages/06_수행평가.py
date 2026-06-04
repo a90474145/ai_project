@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 
 st.set_page_config(
     page_title="Seoul Public WiFi Analysis",
@@ -9,166 +10,252 @@ st.set_page_config(
 
 st.title("📶 Seoul Public WiFi Analysis")
 
-uploaded_file = st.file_uploader(
-    "Upload Seoul WiFi CSV",
-    type=["csv"]
-)
+# -----------------------
+# Load Data
+# -----------------------
 
-if uploaded_file is not None:
+@st.cache_data
+def load_data():
 
-    @st.cache_data
-    def load_data(file):
+    current_file = Path(__file__)
 
-        encodings = [
-            "utf-8",
-            "utf-8-sig",
-            "cp949",
-            "euc-kr"
-        ]
+    project_root = current_file.parent.parent
 
-        for enc in encodings:
-            try:
-                file.seek(0)
-                return pd.read_csv(file, encoding=enc)
-            except:
-                continue
+    csv_path = project_root / "seoul.csv"
 
-        raise Exception("Unable to read CSV file.")
+    encodings = [
+        "utf-8",
+        "utf-8-sig",
+        "cp949",
+        "euc-kr"
+    ]
 
-    df = load_data(uploaded_file)
+    for enc in encodings:
+        try:
+            return pd.read_csv(csv_path, encoding=enc)
+        except:
+            pass
 
-    st.success("Data loaded successfully!")
+    raise Exception("Cannot read seoul.csv")
 
-    # ------------------
-    # Dataset Overview
-    # ------------------
+df = load_data()
 
-    st.subheader("Dataset Overview")
+# -----------------------
+# Overview
+# -----------------------
 
-    c1, c2, c3 = st.columns(3)
+st.header("Dataset Overview")
 
-    c1.metric("Records", f"{len(df):,}")
+c1, c2, c3 = st.columns(3)
 
-    c2.metric(
+with c1:
+    st.metric(
+        "Records",
+        f"{len(df):,}"
+    )
+
+with c2:
+    st.metric(
         "Districts",
         df["설치시군구명"].nunique()
     )
 
-    c3.metric(
+with c3:
+    st.metric(
         "Facility Types",
         df["설치시설구분명"].nunique()
     )
 
-    st.divider()
+st.divider()
 
-    # ------------------
-    # District Analysis
-    # ------------------
+# -----------------------
+# District Analysis
+# -----------------------
 
-    district = (
-        df["설치시군구명"]
-        .value_counts()
-        .reset_index()
-    )
+st.header("WiFi Installations by District")
 
-    district.columns = ["District", "Count"]
+district = (
+    df["설치시군구명"]
+    .value_counts()
+    .reset_index()
+)
 
-    fig1 = px.bar(
-        district,
-        x="District",
-        y="Count",
-        color="Count",
-        text="Count",
-        color_continuous_scale="Turbo"
-    )
+district.columns = [
+    "District",
+    "Count"
+]
 
-    fig1.update_traces(
-        hovertemplate=
-        "<b>%{x}</b><br>Count: %{y}<extra></extra>"
-    )
+fig1 = px.bar(
+    district,
+    x="District",
+    y="Count",
+    color="Count",
+    text="Count",
+    color_continuous_scale="Turbo"
+)
 
-    st.plotly_chart(
-        fig1,
-        use_container_width=True
-    )
+fig1.update_layout(
+    xaxis_title="District",
+    yaxis_title="Count",
+    title=None
+)
 
-    st.divider()
+fig1.update_traces(
+    textposition="outside",
+    hovertemplate=
+    "<b>%{x}</b><br>Count: %{y:,}<extra></extra>"
+)
 
-    # ------------------
-    # Facility Analysis
-    # ------------------
+st.plotly_chart(
+    fig1,
+    use_container_width=True
+)
 
-    facility = (
-        df["설치시설구분명"]
-        .value_counts()
-        .reset_index()
-    )
+st.divider()
 
-    facility.columns = ["Facility", "Count"]
+# -----------------------
+# Facility Analysis
+# -----------------------
 
-    fig2 = px.bar(
-        facility,
-        x="Facility",
-        y="Count",
-        color="Count",
-        text="Count",
-        color_continuous_scale="Viridis"
-    )
+st.header("WiFi Installations by Facility Type")
 
-    fig2.update_traces(
-        hovertemplate=
-        "<b>%{x}</b><br>Count: %{y}<extra></extra>"
-    )
+facility = (
+    df["설치시설구분명"]
+    .value_counts()
+    .reset_index()
+)
 
-    st.plotly_chart(
-        fig2,
-        use_container_width=True
-    )
+facility.columns = [
+    "Facility Type",
+    "Count"
+]
 
-    st.divider()
+fig2 = px.bar(
+    facility,
+    x="Facility Type",
+    y="Count",
+    color="Count",
+    text="Count",
+    color_continuous_scale="Viridis"
+)
 
-    # ------------------
-    # Year Analysis
-    # ------------------
+fig2.update_layout(
+    xaxis_title="Facility Type",
+    yaxis_title="Count",
+    title=None
+)
 
-    if "설치연월" in df.columns:
+fig2.update_traces(
+    textposition="outside",
+    hovertemplate=
+    "<b>%{x}</b><br>Count: %{y:,}<extra></extra>"
+)
 
-        df["Year"] = (
-            df["설치연월"]
-            .astype(str)
-            .str[:4]
-        )
+st.plotly_chart(
+    fig2,
+    use_container_width=True
+)
 
-        yearly = (
-            df["Year"]
-            .value_counts()
-            .sort_index()
-            .reset_index()
-        )
+st.divider()
 
-        yearly.columns = [
-            "Year",
-            "Count"
-        ]
+# -----------------------
+# Year Analysis
+# -----------------------
 
-        fig3 = px.bar(
-            yearly,
-            x="Year",
-            y="Count",
-            color="Count",
-            text="Count",
-            color_continuous_scale="Plasma"
-        )
+st.header("Installation Trend")
 
-        fig3.update_traces(
-            hovertemplate=
-            "<b>%{x}</b><br>Count: %{y}<extra></extra>"
-        )
+df["설치연월"] = df["설치연월"].astype(str)
 
-        st.plotly_chart(
-            fig3,
-            use_container_width=True
-        )
+df["Year"] = df["설치연월"].str[:4]
 
-else:
-    st.info("Please upload a CSV file.")
+yearly = (
+    df["Year"]
+    .value_counts()
+    .sort_index()
+    .reset_index()
+)
+
+yearly.columns = [
+    "Year",
+    "Count"
+]
+
+fig3 = px.bar(
+    yearly,
+    x="Year",
+    y="Count",
+    color="Count",
+    text="Count",
+    color_continuous_scale="Plasma"
+)
+
+fig3.update_layout(
+    xaxis_title="Year",
+    yaxis_title="Installations",
+    title=None
+)
+
+fig3.update_traces(
+    textposition="outside",
+    hovertemplate=
+    "<b>%{x}</b><br>Count: %{y:,}<extra></extra>"
+)
+
+st.plotly_chart(
+    fig3,
+    use_container_width=True
+)
+
+st.divider()
+
+# -----------------------
+# District Filter
+# -----------------------
+
+st.header("District Detail")
+
+selected = st.selectbox(
+    "Select District",
+    sorted(df["설치시군구명"].dropna().unique())
+)
+
+filtered = df[
+    df["설치시군구명"] == selected
+]
+
+detail = (
+    filtered["설치시설구분명"]
+    .value_counts()
+    .reset_index()
+)
+
+detail.columns = [
+    "Facility Type",
+    "Count"
+]
+
+fig4 = px.bar(
+    detail,
+    x="Facility Type",
+    y="Count",
+    color="Count",
+    text="Count",
+    color_continuous_scale="Rainbow"
+)
+
+fig4.update_layout(
+    xaxis_title="Facility Type",
+    yaxis_title="Count",
+    title=None
+)
+
+fig4.update_traces(
+    textposition="outside",
+    hovertemplate=
+    "<b>%{x}</b><br>Count: %{y:,}<extra></extra>"
+)
+
+st.plotly_chart(
+    fig4,
+    use_container_width=True
+)
